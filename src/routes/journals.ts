@@ -4,6 +4,7 @@ import { JournalBriefASR, JournalFullASR } from 'trackbuddy-shared/responses/jou
 import auth from '../middleware/auth'
 import Journal from '../models/Journal'
 import { Req, Res } from '../utils/generic-types'
+import { newJournalValidation } from '../validations/journals'
 
 const router = Router()
 
@@ -38,8 +39,12 @@ router.get('/:id', auth, async (req: Req, res: Res<JournalFullASR>) => {
   }
 })
 
+/**
+ * @description create a new journal entry
+ */
 router.post('/', auth, async (req: Req<JournalFullASP>, res: Res<JournalFullASR>) => {
-  // request stuff here
+  const { error } = newJournalValidation.validate(req.body)
+  if (error) return res.status(400).send({ message: 'Invalid request' })
 
   try {
     const newJournal = new Journal({
@@ -49,6 +54,46 @@ router.post('/', auth, async (req: Req<JournalFullASP>, res: Res<JournalFullASR>
     await newJournal.save()
 
     return res.status(201).send(newJournal)
+  } catch (err) {
+    console.log(err)
+    return res.status(500).send({ message: 'Server error' })
+  }
+})
+
+/**
+ * @description mark journal as starred
+ */
+router.post('/favorite/:id', auth, async (req: Req, res: Res<JournalFullASR>) => {
+  try {
+    const journalToEdit = await Journal.findById(req.params.id)
+    if (!journalToEdit) return res.status(404).send({ message: 'Journal not found' })
+    if (journalToEdit.isStarred)
+      return res.status(400).send({ message: 'Journal already starred' })
+
+    journalToEdit.isStarred = true
+    await journalToEdit.save()
+
+    return res.send(journalToEdit)
+  } catch (err) {
+    console.log(err)
+    return res.status(500).send({ message: 'Server error' })
+  }
+})
+
+/**
+ * @description mark journal as unstarred
+ */
+router.delete('/favorite/:id', auth, async (req: Req, res: Res<JournalFullASR>) => {
+  try {
+    const journalToEdit = await Journal.findById(req.params.id)
+    if (!journalToEdit) return res.status(404).send({ message: 'Journal not found' })
+    if (!journalToEdit.isStarred)
+      return res.status(400).send({ message: 'Journal already unstarred' })
+
+    journalToEdit.isStarred = false
+    await journalToEdit.save()
+
+    return res.send(journalToEdit)
   } catch (err) {
     console.log(err)
     return res.status(500).send({ message: 'Server error' })
