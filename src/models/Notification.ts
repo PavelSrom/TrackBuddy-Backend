@@ -1,18 +1,26 @@
-// import { prop, getModelForClass, Ref } from '@typegoose/typegoose'
-// import { required } from '../utils/typegoose'
-// import { User } from './User'
+import { model, Schema, Document } from 'mongoose'
 
-// export class Notification {
-//   @prop({ required, ref: () => User })
-//   public user!: Ref<User>
+const NotificationSchema: Schema = new Schema(
+  {
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    title: {
+      type: String,
+      required: true,
+    },
+    text: {
+      type: String,
+      required: true,
+    },
+  },
+  {
+    timestamps: true,
+  }
+)
 
-//   @prop({ required })
-//   public title!: string
+// TODO: add notification type to trackbuddy-shared
 
-//   @prop({ required })
-//   public text!: string
-// }
-
-// export default getModelForClass(Notification, {
-//   schemaOptions: { timestamps: true },
-// })
+export default model<Document & any>('Notification', NotificationSchema)
