@@ -12,7 +12,6 @@ export default (req: Req, res: Res, next: Next) => {
 
     next()
   } catch (err) {
-    console.log(err)
     return res.status(401).send({ message: 'Invalid token' })
   }
 }

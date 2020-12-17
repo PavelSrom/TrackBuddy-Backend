@@ -1,4 +1,6 @@
 import express, { Application, json } from 'express'
+import compression from 'compression'
+import rateLimit from 'express-rate-limit'
 import helmet from 'helmet'
 import cors from 'cors'
 import mongoose from 'mongoose'
@@ -10,9 +12,18 @@ import journalRoutes from './routes/journals'
 
 const app: Application = express()
 
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+})
+
+// TODO: add XSS protection
+
 app.use(json())
 app.use(cors())
 app.use(helmet())
+app.use(compression())
+app.use(limiter)
 app.use('/api/auth', authRoutes)
 app.use('/api/journals', journalRoutes)
 
