@@ -14,7 +14,7 @@ const router = Router()
 router.get('/', auth, async (req: Req, res: Res<JournalBriefASR[]>) => {
   try {
     const allJournals = await Journal.find({ user: req.userId }).select(
-      '_id isStarred mood standout tags'
+      '_id isStarred mood standout tags createdAt'
     )
 
     return res.send(allJournals)
