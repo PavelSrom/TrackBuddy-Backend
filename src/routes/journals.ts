@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { JournalFullASP } from 'trackbuddy-shared/payloads/journals'
 import { JournalBriefASR, JournalFullASR } from 'trackbuddy-shared/responses/journals'
+import { startOfDay, endOfDay } from 'date-fns'
 import auth from '../middleware/auth'
 import Journal from '../models/Journal'
 import { Req, Res } from '../utils/generic-types'
@@ -14,12 +15,30 @@ const router = Router()
 router.get('/', auth, async (req: Req, res: Res<JournalBriefASR[]>) => {
   try {
     const allJournals = await Journal.find({ user: req.userId }).select(
-      '_id isStarred mood standout tags createdAt'
+      '_id isStarred mood standout tags created'
     )
 
     return res.send(allJournals)
   } catch (err) {
     console.log(err)
+    return res.status(500).send({ message: 'Server error' })
+  }
+})
+
+router.get('/today', auth, async (req: Req, res: Res<{ found: boolean }>) => {
+  const now = new Date()
+
+  try {
+    const journalForToday = await Journal.findOne({
+      user: req.userId,
+      created: {
+        $lte: endOfDay(now).getTime(),
+        $gte: startOfDay(now).getTime(),
+      },
+    })
+
+    return res.send({ found: !!journalForToday })
+  } catch (err) {
     return res.status(500).send({ message: 'Server error' })
   }
 })
@@ -46,9 +65,24 @@ router.post('/', auth, async (req: Req<JournalFullASP>, res: Res<JournalFullASR>
   const { error } = newJournalValidation.validate(req.body)
   if (error) return res.status(400).send({ message: 'Invalid request' })
 
+  const now = new Date()
+
   try {
+    const journalForToday = await Journal.findOne({
+      user: req.userId,
+      created: {
+        $lte: endOfDay(now).getTime(),
+        $gte: startOfDay(now).getTime(),
+      },
+    })
+    if (journalForToday)
+      return res
+        .status(400)
+        .send({ message: 'Journal entry for today has been already created' })
+
     const newJournal = new Journal({
       user: req.userId,
+      created: new Date().getTime(),
       ...req.body,
     })
     await newJournal.save()

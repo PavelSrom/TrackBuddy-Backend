@@ -23,6 +23,11 @@ const UserSchema: Schema = new Schema({
   avatar: {
     type: String,
   },
+  tags: {
+    type: [String],
+    required: true,
+    default: [],
+  },
 })
 
 export default model<Document & UserProfileASR>('User', UserSchema)
