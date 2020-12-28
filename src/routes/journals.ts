@@ -18,7 +18,7 @@ type FilterOptions = {
     $lte: number
     $gte: number
   }
-  isStarred: boolean
+  isStarred?: boolean
 }
 
 type SortByOptions = {
@@ -37,8 +37,8 @@ router.get('/', auth, async (req: Req, res: Res<JournalBriefASR[]>) => {
       $lte: maxMonth.getTime(),
       $gte: minMonth.getTime(),
     },
-    isStarred: favorites === 'true',
   }
+  if (favorites) filterOptions.isStarred = favorites === 'true'
 
   const sortByOptions: SortByOptions = {}
   if (sortBy === 'newest') sortByOptions.created = -1
