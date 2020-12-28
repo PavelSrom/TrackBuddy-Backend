@@ -131,6 +131,22 @@ router.post('/', auth, async (req: Req<JournalFullASP>, res: Res<JournalFullASR>
 })
 
 /**
+ * @description undo a journal entry
+ */
+router.delete('/:id', auth, async (req: Req, res: Res<JournalFullASR>) => {
+  try {
+    const journalToDelete = await Journal.findById(req.params.id)
+    if (!journalToDelete) return res.status(404).send({ message: 'Journal not found' })
+
+    await journalToDelete.remove()
+
+    return res.send(journalToDelete)
+  } catch (err) {
+    return res.status(500).send({ message: 'Server error' })
+  }
+})
+
+/**
  * @description mark journal as starred
  */
 router.post('/favorite/:id', auth, async (req: Req, res: Res<JournalFullASR>) => {
