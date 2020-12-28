@@ -19,13 +19,14 @@
     "compression": "^1.7.4",
     "config": "^3.3.2",
     "cors": "^2.8.5",
+    "date-fns": "^2.16.1",
     "express": "^4.17.1",
     "express-rate-limit": "^5.2.3",
     "helmet": "^4.2.0",
     "joi": "^17.3.0",
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^5.10.15",
-    "trackbuddy-shared": "^1.2.0"
+    "trackbuddy-shared": "^1.4.0"
   },
   "devDependencies": {
     "@commitlint/cli": "^11.0.0",

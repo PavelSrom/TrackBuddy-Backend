@@ -1,4 +1,5 @@
 import { model, Schema, Document } from 'mongoose'
+import { NotificationASR } from 'trackbuddy-shared/responses/notifications'
 
 const NotificationSchema: Schema = new Schema(
   {
@@ -21,6 +22,4 @@ const NotificationSchema: Schema = new Schema(
   }
 )
 
-// TODO: add notification type to trackbuddy-shared
-
-export default model<Document & any>('Notification', NotificationSchema)
+export default model<Document & NotificationASR>('Notification', NotificationSchema)

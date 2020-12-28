@@ -6,6 +6,6 @@ export const newJournalValidation = Joi.object({
   wentWell: Joi.string().required(),
   wentWrong: Joi.string().required(),
   betterNextTime: Joi.string().required(),
-  excuses: Joi.string().required(),
+  excuses: Joi.string().allow(''),
   tags: Joi.array().items(Joi.string()),
 })
