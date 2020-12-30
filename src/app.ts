@@ -9,6 +9,7 @@ import { getKey } from './utils/get-key'
 // import routes
 import authRoutes from './routes/auth'
 import journalRoutes from './routes/journals'
+import habitRoutes from './routes/habits'
 
 const app: Application = express()
 
@@ -27,6 +28,7 @@ app.use(compression())
 app.use(limiter)
 app.use('/api/auth', authRoutes)
 app.use('/api/journals', journalRoutes)
+app.use('/api/habits', habitRoutes)
 
 const PORT = process.env.PORT || 5000
 
