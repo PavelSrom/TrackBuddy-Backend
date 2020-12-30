@@ -69,10 +69,12 @@ router.delete('/:id', auth, async (req: Req, res: Res) => {
   try {
     const habitToDelete = await Habit.findById(req.params.id)
     if (!habitToDelete) return res.status(404).send({ message: 'Habit not found' })
+    if (habitToDelete.user !== req.userId)
+      return res.status(403).send({ message: 'Access denied' })
 
     await habitToDelete.remove()
 
-    return res.status(200).send(habitToDelete)
+    return res.send(habitToDelete)
   } catch (err) {
     console.log(err)
     return res.status(500).send({ message: 'Server error' })
@@ -106,11 +108,39 @@ router.delete('/:id/check', auth, async (req: Req, res: Res) => {
 /**
  * @description return repetitions for a specific time period
  */
-router.get('/:id/repetitions', auth, async (req: Req, res: Res) => {
-  const {} = req.query
+router.get('/:id/repetitions', auth, async (req: Req, res: Res<number[]>) => {
+  const { min, max } = req.query
+
+  if (!min || !max || +min > +max)
+    return res.status(400).send({ message: 'Invalid time period' })
 
   try {
-    //
+    const habitRepetitions = await Habit.aggregate([
+      { $match: { _id: Types.ObjectId(req.params.id) } },
+      {
+        $project: {
+          repetitions: {
+            $filter: {
+              input: '$repetitions',
+              as: 'repetitions',
+              cond: {
+                $and: [
+                  { $gte: ['$$repetitions', +min] },
+                  { $lte: ['$$repetitions', +max] },
+                ],
+              },
+            },
+          },
+        },
+      },
+    ])
+
+    // if we don't get exactly one thing back, that's a problem because
+    // we're fetching by ID
+    if (habitRepetitions.length !== 1)
+      return res.status(400).send({ message: 'Unable to fetch repetitions' })
+
+    return res.send(habitRepetitions[0].repetitions)
   } catch (err) {
     console.log(err)
     return res.status(500).send({ message: 'Server error' })
