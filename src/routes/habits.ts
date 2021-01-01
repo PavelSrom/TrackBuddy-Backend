@@ -1,4 +1,6 @@
 import { Router } from 'express'
+import { HabitNewASP } from 'trackbuddy-shared/payloads/habits'
+import { HabitOverviewASR, HabitFullASR } from 'trackbuddy-shared/responses/habits'
 import { Types } from 'mongoose'
 // import { startOfDay, endOfDay } from 'date-fns'
 import auth from '../middleware/auth'
@@ -19,7 +21,7 @@ const router = Router()
 /**
  * @description get habits with last rep and without reps array
  */
-router.get('/', auth, async (req: Req, res: Res) => {
+router.get('/', auth, async (req: Req, res: Res<HabitOverviewASR[]>) => {
   try {
     const allHabits = await Habit.aggregate([
       { $match: { user: Types.ObjectId(req.userId) } },
@@ -47,7 +49,7 @@ router.get('/', auth, async (req: Req, res: Res) => {
 /**
  * @description create a new habit, TODO
  */
-router.post('/', auth, async (req: Req, res: Res) => {
+router.post('/', auth, async (req: Req<HabitNewASP>, res: Res<HabitFullASR>) => {
   try {
     const newHabit = new Habit({
       user: req.userId,
@@ -65,7 +67,7 @@ router.post('/', auth, async (req: Req, res: Res) => {
 /**
  * @description delete a habit
  */
-router.delete('/:id', auth, async (req: Req, res: Res) => {
+router.delete('/:id', auth, async (req: Req, res: Res<HabitFullASR>) => {
   try {
     const habitToDelete = await Habit.findById(req.params.id).select('-repetitions')
     if (!habitToDelete) return res.status(404).send({ message: 'Habit not found' })
