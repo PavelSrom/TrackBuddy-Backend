@@ -9,6 +9,9 @@ import { Req, Res } from '../utils/generic-types'
 import auth from '../middleware/auth'
 import User from '../models/User'
 import Journal from '../models/Journal'
+import Profile from '../models/Profile'
+import Habit from '../models/Habit'
+import Notification from '../models/Notification'
 
 const router = Router()
 
@@ -46,13 +49,18 @@ router.post('/register', async (req: Req<RegisterASP>, res: Res<TokenASR>) => {
 
     const hashedPassword = await bcrypt.hash(password, 10)
     const newUser = new User({
-      firstName,
-      lastName,
       email,
       password: hashedPassword,
-      avatar: '',
     })
     await newUser.save()
+
+    const newProfile = new Profile({
+      user: newUser._id,
+      firstName,
+      lastName,
+      avatar: '',
+    })
+    await newProfile.save()
 
     const token = jwt.sign({ id: newUser._id }, getKey('JWT_SECRET'), {
       expiresIn: 86400,
@@ -102,11 +110,38 @@ router.delete('/', auth, async (req: Req, res: Res) => {
     if (!user) return res.status(404).send({ message: 'Cannot find your profile' })
 
     await user.remove()
+    await Profile.deleteMany({ user: req.userId })
     await Journal.deleteMany({ user: req.userId })
+    await Habit.deleteMany({ user: req.userId })
+    await Notification.deleteMany({ user: req.userId })
     // remove notifications, journals, habits, bucket list...
 
     return res.send({ message: 'Account has been deleted' })
   } catch (err) {
+    return res.status(500).send({ message: 'Server error' })
+  }
+})
+
+/**
+ * @description request a new password
+ */
+router.post('/pw-request', async (req: Req, res: Res) => {
+  try {
+    //
+  } catch (err) {
+    console.log(err)
+    return res.status(500).send({ message: 'Server error' })
+  }
+})
+
+/**
+ * @description confirm password change
+ */
+router.post('/pw-confirm', async (req: Req, res: Res) => {
+  try {
+    //
+  } catch (err) {
+    console.log(err)
     return res.status(500).send({ message: 'Server error' })
   }
 })

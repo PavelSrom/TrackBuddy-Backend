@@ -8,6 +8,7 @@ import { getKey } from './utils/get-key'
 
 // import routes
 import authRoutes from './routes/auth'
+import profileRoutes from './routes/profile'
 import journalRoutes from './routes/journals'
 import habitRoutes from './routes/habits'
 
@@ -27,6 +28,7 @@ app.use(helmet())
 app.use(compression())
 app.use(limiter)
 app.use('/api/auth', authRoutes)
+app.use('/api/profile', profileRoutes)
 app.use('/api/journals', journalRoutes)
 app.use('/api/habits', habitRoutes)
 
