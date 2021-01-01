@@ -131,6 +131,26 @@ router.post('/', auth, async (req: Req<JournalFullASP>, res: Res<JournalFullASR>
 })
 
 /**
+ * @description update a journal entry
+ */
+router.put('/:id', auth, async (req: Req, res: Res) => {
+  const { error } = newJournalValidation.validate(req.body)
+  if (error) return res.status(400).send({ message: 'Invalid request' })
+
+  try {
+    const journalToUpdate = await Journal.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    })
+    if (!journalToUpdate) return res.status(404).send({ message: 'Journal not found' })
+
+    return res.send(journalToUpdate)
+  } catch (err) {
+    console.log(err)
+    return res.status(500).send({ message: 'Server error' })
+  }
+})
+
+/**
  * @description undo a journal entry
  */
 router.delete('/:id', auth, async (req: Req, res: Res<JournalFullASR>) => {
