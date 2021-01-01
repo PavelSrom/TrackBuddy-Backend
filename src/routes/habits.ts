@@ -67,7 +67,7 @@ router.post('/', auth, async (req: Req, res: Res) => {
  */
 router.delete('/:id', auth, async (req: Req, res: Res) => {
   try {
-    const habitToDelete = await Habit.findById(req.params.id)
+    const habitToDelete = await Habit.findById(req.params.id).select('-repetitions')
     if (!habitToDelete) return res.status(404).send({ message: 'Habit not found' })
     if (habitToDelete.user !== req.userId)
       return res.status(403).send({ message: 'Access denied' })
