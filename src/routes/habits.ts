@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { HabitNewASP } from 'trackbuddy-shared/payloads/habits'
 import { HabitOverviewASR, HabitFullASR } from 'trackbuddy-shared/responses/habits'
 import { Types } from 'mongoose'
-// import { startOfDay, endOfDay } from 'date-fns'
+import { startOfDay, endOfDay } from 'date-fns'
 import auth from '../middleware/auth'
 import Habit from '../models/Habit'
 import { Req, Res } from '../utils/generic-types'
@@ -87,8 +87,49 @@ router.delete('/:id', auth, async (req: Req, res: Res<HabitFullASR>) => {
  * @description check a habit for a specific day
  */
 router.post('/:id/check', auth, async (req: Req, res: Res) => {
+  let responseInLoop = false
+  const { day } = req.query
+  if (!day) return res.status(400).send({ message: 'Timestamp not included' })
+
+  const now = new Date()
+  const endOfToday = endOfDay(now).getTime()
+
+  if (+day! > endOfToday)
+    return res.status(400).send({ message: 'Cannot check for the future' })
+
   try {
-    //
+    const habitToUpdate = await Habit.findById(req.params.id)
+    if (!habitToUpdate) return res.status(404).send({ message: 'Habit not found' })
+
+    if (habitToUpdate.repetitions.length === 0) {
+      habitToUpdate.repetitions.splice(0, 0, +day)
+    } else {
+      const whereToInsertCheck = habitToUpdate.repetitions.findIndex(
+        (rep: number, index: number) => {
+          if (rep === +day) {
+            responseInLoop = true
+            console.log('already there')
+            return res.status(400).send({ message: 'Habit already checked' })
+          }
+
+          return (
+            rep < +day &&
+            (habitToUpdate.repetitions[index + 1] > +day ||
+              !habitToUpdate.repetitions[index + 1])
+          )
+        }
+      )
+      // if (whereToInsertCheck === -1)
+      //   return res.status(400).send({ message: 'Habit already checked' })
+      console.log(whereToInsertCheck)
+
+      if (!responseInLoop)
+        habitToUpdate.repetitions.splice(whereToInsertCheck + 1, 0, +day)
+    }
+
+    await habitToUpdate.save()
+
+    if (!responseInLoop) return res.send({ message: 'Habit checked' })
   } catch (err) {
     console.log(err)
     return res.status(500).send({ message: 'Server error' })
