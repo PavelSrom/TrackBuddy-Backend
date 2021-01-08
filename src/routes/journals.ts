@@ -19,6 +19,7 @@ type FilterOptions = {
     $gte: number
   }
   isStarred?: boolean
+  tags?: string
 }
 
 type SortByOptions = {
@@ -27,7 +28,7 @@ type SortByOptions = {
 }
 
 router.get('/', auth, async (req: Req, res: Res<JournalBriefASR[]>) => {
-  const { month, year, favorites, sortBy } = req.query
+  const { month, year, favorites, sortBy, tag } = req.query
 
   const minMonth = startOfMonth(new Date(+year!, +month!, 15))
   const maxMonth = endOfMonth(new Date(+year!, +month!, 15))
@@ -39,6 +40,7 @@ router.get('/', auth, async (req: Req, res: Res<JournalBriefASR[]>) => {
     },
   }
   if (favorites) filterOptions.isStarred = favorites === 'true'
+  if (tag) filterOptions.tags = tag as string
 
   const sortByOptions: SortByOptions = {}
   if (sortBy === 'newest') sortByOptions.created = -1
