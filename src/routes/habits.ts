@@ -108,7 +108,6 @@ router.post('/:id/check', auth, async (req: Req, res: Res) => {
         (rep: number, index: number) => {
           if (rep === +day) {
             responseInLoop = true
-            console.log('already there')
             return res.status(400).send({ message: 'Habit already checked' })
           }
 
@@ -119,9 +118,6 @@ router.post('/:id/check', auth, async (req: Req, res: Res) => {
           )
         }
       )
-      // if (whereToInsertCheck === -1)
-      //   return res.status(400).send({ message: 'Habit already checked' })
-      console.log(whereToInsertCheck)
 
       if (!responseInLoop)
         habitToUpdate.repetitions.splice(whereToInsertCheck + 1, 0, +day)
@@ -140,8 +136,26 @@ router.post('/:id/check', auth, async (req: Req, res: Res) => {
  * @description uncheck a habit for a specific day
  */
 router.delete('/:id/check', auth, async (req: Req, res: Res) => {
+  const { day } = req.query
+  if (!day) return res.status(400).send({ message: 'Timestamp not included' })
+
   try {
-    //
+    const habitToUpdate = await Habit.findById(req.params.id)
+    if (!habitToUpdate) return res.status(404).send({ message: 'Habit not found' })
+
+    if (habitToUpdate.repetitions.length === 0)
+      return res.status(400).send({ message: 'No repetitions to uncheck' })
+
+    const hasRepetitionToUncheck = habitToUpdate.repetitions.findIndex(
+      (rep: number) => rep === +day
+    )
+    if (hasRepetitionToUncheck === -1)
+      return res.status(404).send({ message: 'Repetition to uncheck not found' })
+
+    habitToUpdate.repetitions.splice(hasRepetitionToUncheck, 1)
+    await habitToUpdate.save()
+
+    return res.send({ message: 'Habit unchecked' })
   } catch (err) {
     console.log(err)
     return res.status(500).send({ message: 'Server error' })
