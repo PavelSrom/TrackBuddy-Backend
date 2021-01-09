@@ -57,7 +57,7 @@ router.get('/', auth, async (req: Req, res: Res<HabitOverviewASR[]>) => {
           newestRep: { $max: '$repetitions' },
         },
       },
-    ])
+    ]).sort({ name: -1 })
 
     return res.send(allHabits)
   } catch (err) {
@@ -67,13 +67,17 @@ router.get('/', auth, async (req: Req, res: Res<HabitOverviewASR[]>) => {
 })
 
 /**
- * @description create a new habit, TODO
+ * @description create a new habit
  */
 router.post('/', auth, async (req: Req<HabitNewASP>, res: Res<HabitFullASR>) => {
   const { error } = newHabitValidation.validate(req.body)
   if (error) return res.status(400).send({ message: 'Invalid request' })
 
   try {
+    const numOfHabits = await Habit.find({ user: req.userId }).count()
+    if (numOfHabits === 5)
+      return res.status(400).send({ message: 'Too many habits at a time' })
+
     const newHabit = new Habit({
       user: req.userId,
       ...req.body,
