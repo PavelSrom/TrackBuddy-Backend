@@ -2,10 +2,11 @@ import { Router } from 'express'
 import { HabitNewASP } from 'trackbuddy-shared/payloads/habits'
 import { HabitOverviewASR, HabitFullASR } from 'trackbuddy-shared/responses/habits'
 import { Types } from 'mongoose'
-import { startOfDay, endOfDay } from 'date-fns'
+import { endOfDay } from 'date-fns'
 import auth from '../middleware/auth'
 import Habit from '../models/Habit'
 import { Req, Res } from '../utils/generic-types'
+import { newHabitValidation } from '../validations/habits'
 
 const router = Router()
 
@@ -25,6 +26,25 @@ router.get('/', auth, async (req: Req, res: Res<HabitOverviewASR[]>) => {
   try {
     const allHabits = await Habit.aggregate([
       { $match: { user: Types.ObjectId(req.userId) } },
+      {
+        $project: {
+          name: '$name',
+          color: '$color',
+          duration: '$duration',
+          frequency: '$frequency',
+          repetitions: {
+            $cond: {
+              // if the 'repetitions' array is empty, return [0]
+              // because the array must ALWAYS contain something
+              // for the aggregation to work properly
+              if: { $eq: [{ $size: '$repetitions' }, 0] },
+              then: [0],
+              else: '$repetitions',
+            },
+          },
+          _id: 1,
+        },
+      },
       // deserialize any arrays before manipulation
       { $unwind: '$repetitions' },
       {
@@ -50,6 +70,9 @@ router.get('/', auth, async (req: Req, res: Res<HabitOverviewASR[]>) => {
  * @description create a new habit, TODO
  */
 router.post('/', auth, async (req: Req<HabitNewASP>, res: Res<HabitFullASR>) => {
+  const { error } = newHabitValidation.validate(req.body)
+  if (error) return res.status(400).send({ message: 'Invalid request' })
+
   try {
     const newHabit = new Habit({
       user: req.userId,

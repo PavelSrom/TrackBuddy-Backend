@@ -26,7 +26,7 @@ const habitSchema: Schema = new Schema({
   repetitions: {
     type: [Number],
     required: true,
-    default: [],
+    default: [123],
   },
 })
 
