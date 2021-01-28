@@ -5,4 +5,5 @@ export const newHabitValidation = Joi.object({
   color: Joi.string().required(),
   duration: Joi.number().required(),
   frequency: Joi.number().required(),
+  description: Joi.string().allow(''),
 })
