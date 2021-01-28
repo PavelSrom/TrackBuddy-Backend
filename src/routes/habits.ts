@@ -74,7 +74,7 @@ router.post('/', auth, async (req: Req<HabitNewASP>, res: Res<HabitFullASR>) => 
   if (error) return res.status(400).send({ message: 'Invalid request' })
 
   try {
-    const numOfHabits = await Habit.find({ user: req.userId }).count()
+    const numOfHabits = await Habit.find({ user: req.userId }).countDocuments()
     if (numOfHabits === 5)
       return res.status(400).send({ message: 'Too many habits at a time' })
 
@@ -98,7 +98,7 @@ router.delete('/:id', auth, async (req: Req, res: Res<HabitFullASR>) => {
   try {
     const habitToDelete = await Habit.findById(req.params.id).select('-repetitions')
     if (!habitToDelete) return res.status(404).send({ message: 'Habit not found' })
-    if (habitToDelete.user !== req.userId)
+    if (habitToDelete.user.toString() !== req.userId)
       return res.status(403).send({ message: 'Access denied' })
 
     await habitToDelete.remove()
