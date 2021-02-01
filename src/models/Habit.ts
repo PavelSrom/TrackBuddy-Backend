@@ -23,6 +23,10 @@ const habitSchema: Schema = new Schema({
     type: Number,
     required: true,
   },
+  description: {
+    type: String,
+    default: '',
+  },
   repetitions: {
     type: [Number],
     required: true,

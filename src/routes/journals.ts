@@ -19,6 +19,7 @@ type FilterOptions = {
     $gte: number
   }
   isStarred?: boolean
+  tags?: string
 }
 
 type SortByOptions = {
@@ -26,8 +27,11 @@ type SortByOptions = {
   mood?: number
 }
 
+/**
+ * @description get all journals with applied filters
+ */
 router.get('/', auth, async (req: Req, res: Res<JournalBriefASR[]>) => {
-  const { month, year, favorites, sortBy } = req.query
+  const { month, year, favorites, sortBy, tag } = req.query
 
   const minMonth = startOfMonth(new Date(+year!, +month!, 15))
   const maxMonth = endOfMonth(new Date(+year!, +month!, 15))
@@ -39,6 +43,7 @@ router.get('/', auth, async (req: Req, res: Res<JournalBriefASR[]>) => {
     },
   }
   if (favorites) filterOptions.isStarred = favorites === 'true'
+  if (tag) filterOptions.tags = tag as string
 
   const sortByOptions: SortByOptions = {}
   if (sortBy === 'newest') sortByOptions.created = -1
@@ -61,6 +66,9 @@ router.get('/', auth, async (req: Req, res: Res<JournalBriefASR[]>) => {
   }
 })
 
+/**
+ * @description check if the user made a journal today already
+ */
 router.get('/today', auth, async (req: Req, res: Res<{ found: boolean }>) => {
   const now = new Date()
 

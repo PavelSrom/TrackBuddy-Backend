@@ -2,10 +2,11 @@ import { Router } from 'express'
 import { HabitNewASP } from 'trackbuddy-shared/payloads/habits'
 import { HabitOverviewASR, HabitFullASR } from 'trackbuddy-shared/responses/habits'
 import { Types } from 'mongoose'
-// import { startOfDay, endOfDay } from 'date-fns'
+import { endOfDay } from 'date-fns'
 import auth from '../middleware/auth'
 import Habit from '../models/Habit'
 import { Req, Res } from '../utils/generic-types'
+import { newHabitValidation } from '../validations/habits'
 
 const router = Router()
 
@@ -25,6 +26,25 @@ router.get('/', auth, async (req: Req, res: Res<HabitOverviewASR[]>) => {
   try {
     const allHabits = await Habit.aggregate([
       { $match: { user: Types.ObjectId(req.userId) } },
+      {
+        $project: {
+          name: '$name',
+          color: '$color',
+          duration: '$duration',
+          frequency: '$frequency',
+          repetitions: {
+            $cond: {
+              // if the 'repetitions' array is empty, return [0]
+              // because the array must ALWAYS contain something
+              // for the aggregation to work properly
+              if: { $eq: [{ $size: '$repetitions' }, 0] },
+              then: [0],
+              else: '$repetitions',
+            },
+          },
+          _id: 1,
+        },
+      },
       // deserialize any arrays before manipulation
       { $unwind: '$repetitions' },
       {
@@ -37,7 +57,7 @@ router.get('/', auth, async (req: Req, res: Res<HabitOverviewASR[]>) => {
           newestRep: { $max: '$repetitions' },
         },
       },
-    ])
+    ]).sort({ name: -1 })
 
     return res.send(allHabits)
   } catch (err) {
@@ -47,10 +67,32 @@ router.get('/', auth, async (req: Req, res: Res<HabitOverviewASR[]>) => {
 })
 
 /**
- * @description create a new habit, TODO
+ * @description get habit by id, no repetitions
+ */
+router.get('/:id', auth, async (req: Req, res: Res<any[]>) => {
+  try {
+    const habit = await Habit.findById(req.params.id).select('-repetitions -user')
+    if (!habit) return res.status(404).send({ message: 'Habit not found' })
+
+    return res.send(habit)
+  } catch (err) {
+    console.log(err)
+    return res.status(500).send({ message: 'Server error' })
+  }
+})
+
+/**
+ * @description create a new habit
  */
 router.post('/', auth, async (req: Req<HabitNewASP>, res: Res<HabitFullASR>) => {
+  const { error } = newHabitValidation.validate(req.body)
+  if (error) return res.status(400).send({ message: 'Invalid request' })
+
   try {
+    const numOfHabits = await Habit.find({ user: req.userId }).countDocuments()
+    if (numOfHabits === 5)
+      return res.status(400).send({ message: 'Too many habits at a time' })
+
     const newHabit = new Habit({
       user: req.userId,
       ...req.body,
@@ -71,7 +113,7 @@ router.delete('/:id', auth, async (req: Req, res: Res<HabitFullASR>) => {
   try {
     const habitToDelete = await Habit.findById(req.params.id).select('-repetitions')
     if (!habitToDelete) return res.status(404).send({ message: 'Habit not found' })
-    if (habitToDelete.user !== req.userId)
+    if (habitToDelete.user.toString() !== req.userId)
       return res.status(403).send({ message: 'Access denied' })
 
     await habitToDelete.remove()
@@ -87,8 +129,45 @@ router.delete('/:id', auth, async (req: Req, res: Res<HabitFullASR>) => {
  * @description check a habit for a specific day
  */
 router.post('/:id/check', auth, async (req: Req, res: Res) => {
+  let responseInLoop = false
+  const { day } = req.query
+  if (!day) return res.status(400).send({ message: 'Timestamp not included' })
+
+  const now = new Date()
+  const endOfToday = endOfDay(now).getTime()
+
+  if (+day! > endOfToday)
+    return res.status(400).send({ message: 'Cannot check for the future' })
+
   try {
-    //
+    const habitToUpdate = await Habit.findById(req.params.id)
+    if (!habitToUpdate) return res.status(404).send({ message: 'Habit not found' })
+
+    if (habitToUpdate.repetitions.length === 0) {
+      habitToUpdate.repetitions.splice(0, 0, +day)
+    } else {
+      const whereToInsertCheck = habitToUpdate.repetitions.findIndex(
+        (rep: number, index: number) => {
+          if (rep === +day) {
+            responseInLoop = true
+            return res.status(400).send({ message: 'Habit already checked' })
+          }
+
+          return (
+            rep < +day &&
+            (habitToUpdate.repetitions[index + 1] > +day ||
+              !habitToUpdate.repetitions[index + 1])
+          )
+        }
+      )
+
+      if (!responseInLoop)
+        habitToUpdate.repetitions.splice(whereToInsertCheck + 1, 0, +day)
+    }
+
+    await habitToUpdate.save()
+
+    if (!responseInLoop) return res.send({ message: 'Habit checked' })
   } catch (err) {
     console.log(err)
     return res.status(500).send({ message: 'Server error' })
@@ -99,8 +178,26 @@ router.post('/:id/check', auth, async (req: Req, res: Res) => {
  * @description uncheck a habit for a specific day
  */
 router.delete('/:id/check', auth, async (req: Req, res: Res) => {
+  const { day } = req.query
+  if (!day) return res.status(400).send({ message: 'Timestamp not included' })
+
   try {
-    //
+    const habitToUpdate = await Habit.findById(req.params.id)
+    if (!habitToUpdate) return res.status(404).send({ message: 'Habit not found' })
+
+    if (habitToUpdate.repetitions.length === 0)
+      return res.status(400).send({ message: 'No repetitions to uncheck' })
+
+    const hasRepetitionToUncheck = habitToUpdate.repetitions.findIndex(
+      (rep: number) => rep === +day
+    )
+    if (hasRepetitionToUncheck === -1)
+      return res.status(404).send({ message: 'Repetition to uncheck not found' })
+
+    habitToUpdate.repetitions.splice(hasRepetitionToUncheck, 1)
+    await habitToUpdate.save()
+
+    return res.send({ message: 'Habit unchecked' })
   } catch (err) {
     console.log(err)
     return res.status(500).send({ message: 'Server error' })
