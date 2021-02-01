@@ -67,6 +67,21 @@ router.get('/', auth, async (req: Req, res: Res<HabitOverviewASR[]>) => {
 })
 
 /**
+ * @description get habit by id, no repetitions
+ */
+router.get('/:id', auth, async (req: Req, res: Res<any[]>) => {
+  try {
+    const habit = await Habit.findById(req.params.id).select('-repetitions -user')
+    if (!habit) return res.status(404).send({ message: 'Habit not found' })
+
+    return res.send(habit)
+  } catch (err) {
+    console.log(err)
+    return res.status(500).send({ message: 'Server error' })
+  }
+})
+
+/**
  * @description create a new habit
  */
 router.post('/', auth, async (req: Req<HabitNewASP>, res: Res<HabitFullASR>) => {

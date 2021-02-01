@@ -27,6 +27,9 @@ type SortByOptions = {
   mood?: number
 }
 
+/**
+ * @description get all journals with applied filters
+ */
 router.get('/', auth, async (req: Req, res: Res<JournalBriefASR[]>) => {
   const { month, year, favorites, sortBy, tag } = req.query
 
@@ -63,6 +66,9 @@ router.get('/', auth, async (req: Req, res: Res<JournalBriefASR[]>) => {
   }
 })
 
+/**
+ * @description check if the user made a journal today already
+ */
 router.get('/today', auth, async (req: Req, res: Res<{ found: boolean }>) => {
   const now = new Date()
 
